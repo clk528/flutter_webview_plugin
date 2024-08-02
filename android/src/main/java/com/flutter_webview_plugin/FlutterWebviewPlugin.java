@@ -12,10 +12,15 @@ import android.webkit.CookieManager;
 import android.webkit.ValueCallback;
 import android.os.Build;
 
+import androidx.annotation.NonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
@@ -24,21 +29,24 @@ import io.flutter.plugin.common.PluginRegistry;
 /**
  * FlutterWebviewPlugin
  */
-public class FlutterWebviewPlugin implements MethodCallHandler, PluginRegistry.ActivityResultListener {
+public class FlutterWebviewPlugin implements FlutterPlugin, ActivityAware, MethodCallHandler, PluginRegistry.ActivityResultListener {
     private Activity activity;
     private WebviewManager webViewManager;
     private Context context;
-    static MethodChannel channel;
+    static MethodChannel channel = null;
     private static final String CHANNEL_NAME = "flutter_webview_plugin";
     private static final String JS_CHANNEL_NAMES_FIELD = "javascriptChannelNames";
 
-    public static void registerWith(PluginRegistry.Registrar registrar) {
+    public void register(PluginRegistry.Registrar registrar) {
         if (registrar.activity() != null) {
             channel = new MethodChannel(registrar.messenger(), CHANNEL_NAME);
             final FlutterWebviewPlugin instance = new FlutterWebviewPlugin(registrar.activity(), registrar.activeContext());
             registrar.addActivityResultListener(instance);
             channel.setMethodCallHandler(instance);
         }
+    }
+
+    public FlutterWebviewPlugin() {
     }
 
     FlutterWebviewPlugin(Activity activity, Context context) {
@@ -226,6 +234,7 @@ public class FlutterWebviewPlugin implements MethodCallHandler, PluginRegistry.A
 
     /**
      * Checks if can navigate forward
+     *
      * @param result
      */
     private void canGoForward(MethodChannel.Result result) {
@@ -323,5 +332,41 @@ public class FlutterWebviewPlugin implements MethodCallHandler, PluginRegistry.A
             return webViewManager.resultHandler.handleResult(i, i1, intent);
         }
         return false;
+    }
+
+    @Override
+    public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
+        this.channel = new MethodChannel(binding.getBinaryMessenger(), CHANNEL_NAME);
+        this.channel.setMethodCallHandler(this);
+        this.context = binding.getApplicationContext();
+    }
+
+    @Override
+    public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
+        if (this.channel != null) {
+            this.channel.setMethodCallHandler(null);
+            this.channel = null;
+        }
+    }
+
+    @Override
+    public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
+        this.activity = binding.getActivity();
+        binding.addActivityResultListener(this);
+    }
+
+    @Override
+    public void onDetachedFromActivityForConfigChanges() {
+
+    }
+
+    @Override
+    public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
+        binding.removeActivityResultListener(this);
+    }
+
+    @Override
+    public void onDetachedFromActivity() {
+
     }
 }
