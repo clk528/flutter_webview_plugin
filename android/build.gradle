@@ -35,7 +35,7 @@ apply plugin: 'com.android.library'
 
 android {
     namespace 'com.flutter_webview_plugin'
-    compileSdk 28
+    compileSdk 31
 
     defaultConfig {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
